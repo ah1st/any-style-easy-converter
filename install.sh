@@ -1,10 +1,11 @@
 #!/bin/bash
 
-# التأكد من التحديث وتثبيت الحزم الأساسية
+# 1. التأكد من التحديث وتثبيت الحزم الأساسية
 sudo apt update
-sudo apt install -y python3-pip python3-venv ruby ruby-dev poppler-utils
+# تم استبدال python3-pip بـ python3-venv لأننا نستخدم البيئة الافتراضية
+sudo apt install -y python3-venv ruby-full ruby-dev poppler-utils
 
-# تثبيت Anystyle إذا لم يكن موجوداً
+# 2. تثبيت Anystyle
 if ! command -v anystyle &> /dev/null; then
     echo "جاري تثبيت Anystyle..."
     sudo gem install anystyle anystyle-cli
@@ -12,15 +13,17 @@ else
     echo "Anystyle مثبت بالفعل."
 fi
 
-# إعداد البيئة الافتراضية
+# 3. إعداد البيئة الافتراضية
 if [ ! -d "venv" ]; then
     echo "إنشاء بيئة افتراضية جديدة..."
     python3 -m venv venv
 fi
 
-# تثبيت المتطلبات داخل البيئة
-# نقوم بالتثبيت مباشرة عبر المسار الكامل لـ pip داخل البيئة لتجنب التضارب
+# 4. تثبيت المتطلبات المحددة في ملفك
+echo "جاري تثبيت المكتبات المطلوبة..."
 ./venv/bin/pip install --upgrade pip
-./venv/bin/pip install customtkinter
+./venv/bin/pip install -r requirements.txt
 
-echo "تم إعداد كل شيء بنجاح."
+echo "=========================================="
+echo "تم إعداد كل شيء بنجاح! يمكنك الآن تشغيل البرنامج."
+echo "=========================================="
