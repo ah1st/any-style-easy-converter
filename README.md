@@ -29,8 +29,9 @@
     Bash
 
     ./run.sh
-
 الترخيص
 
 تعتمد هذه الأداة على محرك AnyStyle الموزع تحت رخصة BSD-style license.
 
+
+---
