@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=AnyStyle Converter
+Comment=Bibliographic Reference Converter
+Exec=/home/mo/Downloads/anystyle-converter-main/run.sh
+Icon=utilities-terminal
+Terminal=false
+Type=Application
+Categories=Utility;Education;
