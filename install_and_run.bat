@@ -1,50 +1,39 @@
 @echo off
-title AnyStyle Converter Installer
-echo Starting Installation and Launch...
+title AnyStyle Converter - Setup
+echo Checking requirements...
 
-:: 1. التحقق من وجود Python
+:: 1. التحقق من وجود Python وتثبيته إذا لزم الأمر
 python --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo Error: Python is not installed. Please install Python first.
-    pause
-    exit /b
+    echo Python not found. Installing Python via winget...
+    winget install Python.Python.3.12 --silent
+    echo Please restart this script after installation completes.
+    pause & exit /b
 )
 
-:: 2. إنشاء بيئة افتراضية (Virtual Environment)
+:: 2. التحقق من وجود Ruby وتثبيته إذا لزم الأمر
+ruby --version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Ruby not found. Installing Ruby via winget...
+    winget install RubyInstallerTeam.Ruby.3.3 --silent
+    echo Please restart this script after installation completes.
+    pause & exit /b
+)
+
+:: 3. تثبيت مكتبة Anystyle المطلوبة
+echo Checking Anystyle...
+call gem install anystyle anystyle-cli --no-document
+
+:: 4. إعداد البيئة الافتراضية وتثبيت مكتبات بايثون
 if not exist venv (
     echo Creating virtual environment...
     python -m venv venv
-    if %errorlevel% neq 0 goto error_handler
 )
-
-:: 3. تثبيت المتطلبات
-echo Installing requirements...
 call venv\Scripts\activate
+echo Installing Python requirements...
 pip install -r requirements.txt
-if %errorlevel% neq 0 goto error_handler
 
-:: 4. التحقق من وجود Ruby (ضروري لـ AnyStyle)
-ruby --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo Error: Ruby is not installed. Please install Ruby and 'anystyle' gem.
-    goto error_handler
-)
-
-:: 5. تشغيل البرنامج
+:: 5. التشغيل
 echo Launching Application...
 python anystyle-converter.py
-if %errorlevel% neq 0 goto error_handler
-
-echo Success!
 pause
-exit /b
-
-:: معالجة الأخطاء
-:error_handler
-echo.
-echo ===========================================
-echo [ERROR] An error occurred during execution.
-echo Please check the error message above.
-echo ===========================================
-pause
-exit /b
