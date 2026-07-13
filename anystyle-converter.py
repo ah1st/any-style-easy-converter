@@ -5,7 +5,6 @@ import os
 import threading
 import arabic_reshaper
 from bidi.algorithm import get_display
-from datetime import datetime
 
 def reshape_text(text):
     return get_display(arabic_reshaper.reshape(text))
@@ -22,14 +21,13 @@ class AnyStyleConverter(ctk.CTk):
         self.lbl_file = ctk.CTkLabel(self, text=reshape_text("لم يتم اختيار ملف"))
         self.lbl_file.pack(pady=5)
 
-        self.format_var = ctk.StringVar(value="json")
+        self.format_var = ctk.StringVar(value="bib")
         self.dropdown = ctk.CTkOptionMenu(self, variable=self.format_var, values=["json", "bib", "csl", "ris", "xml"])
         self.dropdown.pack(pady=10)
 
         self.btn_convert = ctk.CTkButton(self, text=reshape_text("بدء التحويل"), command=self.start_conversion_thread, fg_color="green")
         self.btn_convert.pack(pady=15)
 
-        # شريط التقدم
         self.progress_bar = ctk.CTkProgressBar(self)
         self.progress_bar.set(0)
         self.progress_bar.pack(pady=10, padx=20, fill="x")
@@ -47,38 +45,62 @@ class AnyStyleConverter(ctk.CTk):
         self.log_textbox.configure(state="disabled")
 
     def select_file(self):
-        self.selected_file = filedialog.askopenfilename()
-        if self.selected_file:
-            self.lbl_file.configure(text=reshape_text(os.path.basename(self.selected_file)))
+        file_path = filedialog.askopenfilename()
+        if file_path:
+            self.selected_file = file_path
+            self.lbl_file.configure(text=reshape_text(os.path.basename(file_path)))
 
     def start_conversion_thread(self):
         if not self.selected_file:
             messagebox.showwarning(reshape_text("تنبيه"), reshape_text("يرجى اختيار ملف أولاً"))
             return
         
-        # فتح نافذة اختيار مكان الحفظ
         output_format = self.format_var.get()
-        output_file = filedialog.asksaveasfilename(defaultextension=f".{output_format}", filetypes=[(f"{output_format} files", f"*.{output_format}")])
+        # نافذة الحفظ هنا ستحدد اسم "المجلد" الذي سيتم إنشاؤه
+        output_file = filedialog.asksaveasfilename(title="اختر مكان واسم المجلد للحفظ")
         
         if not output_file:
             return
             
-        threading.Thread(target=self.convert_file, args=(output_file,), daemon=True).start()
+        threading.Thread(target=self.convert_file, args=(output_file, output_format), daemon=True).start()
 
-    def convert_file(self, output_file):
+    def convert_file(self, output_file, output_format):
         self.btn_convert.configure(state="disabled")
-        self.progress_bar.set(0.1) # بداية
-        
+        self.progress_bar.set(0.1)
+        self.log("جاري التحويل...")
+
         try:
-            self.log("جاري التحويل...")
-            # تشغيل الأداة
-            subprocess.run(["anystyle", "-f", os.path.splitext(output_file)[1][1:], "parse", self.selected_file, output_file], check=True)
+            format_arg = "bibtex" if output_format == "bib" else output_format
             
-            self.progress_bar.set(1.0) # اكتمال
-            self.log("تم الحفظ بنجاح!")
-            messagebox.showinfo(reshape_text("نجاح"), reshape_text("تم التحويل وحفظ الملف"))
+            # جلب المسار الدقيق الذي حدده سكريبت run.sh
+            anystyle_cmd = os.environ.get('ANYSTYLE_EXACT_PATH', 'anystyle')
+            
+            # نمرر المسار مباشرة ليقوم بإنشاء المجلد وبداخله الملف
+            command_list = [anystyle_cmd, "-f", format_arg, "parse", self.selected_file, output_file]
+            
+            result = subprocess.run(
+                command_list,
+                capture_output=True,
+                text=True,
+                check=False
+            )
+
+            if result.returncode == 0:
+                self.progress_bar.set(1.0)
+                folder_name = os.path.basename(output_file)
+                self.log(f"تم التحويل! تجد الملف داخل مجلد: {folder_name}")
+                messagebox.showinfo(
+                    reshape_text("نجاح"), 
+                    reshape_text(f"تم إنشاء مجلد '{folder_name}' وبداخله الملف المحول بنجاح!")
+                )
+            else:
+                error_msg = result.stderr if result.stderr else result.stdout
+                self.log(f"فشل التحويل: {error_msg}")
+                
+        except FileNotFoundError:
+            self.log("خطأ حرج: لم يتم العثور على أداة anystyle.")
         except Exception as e:
-            self.log("خطأ في التحويل")
+            self.log(f"حدث خطأ غير متوقع: {str(e)}")
         finally:
             self.btn_convert.configure(state="normal")
             self.progress_bar.set(0)
